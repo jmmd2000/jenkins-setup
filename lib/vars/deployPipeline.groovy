@@ -82,6 +82,20 @@ void call() {
           runOnVPS(deployment.environment, "docker compose run --rm ${config.migrate}")
         }
       }
+
+      stage("Start") {
+        steps {
+          runOnVPS(deployment.environment, "docker compose up --detach --wait --wait-timeout 300 --remove-orphans")
+          runOnVPS(deployment.environment, "docker image prune --all --force --filter until=168h || echo 'Image prune failed. The deploy itself worked.'")
+        }
+      }
+
+      stage("Verify") {
+        when { expression { deployment.environment.domain != null } }
+        steps {
+          verifyApp(config, deployment)
+        }
+      }
     }
 
     post {
