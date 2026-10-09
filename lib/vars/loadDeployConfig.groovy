@@ -3,7 +3,7 @@
  *
  * Reads the file straight from git, before the build has a workspace, so the pipeline can build its params from it.
  *
- * Returns the settings from deploy.yaml
+ * @return the settings from deploy.yaml
  */
 Map call() {
   def config = readYaml(text: readTrusted("deploy.yaml"))
@@ -24,7 +24,7 @@ List findProblems(config) {
     problems.add("images must list at least one image.")
   } else {
     for (image in config.images) {
-      problems.addAll(findImageProblems(image))
+      problems.addAll(findImageProblems(image, config))
     }
   }
 
@@ -49,7 +49,7 @@ List findProblems(config) {
   return problems
 }
 
-List findImageProblems(image) {
+List findImageProblems(image, Map config) {
   if (!(image instanceof Map)) {
     return ["Each image must have a name and a dockerfile."]
   }
@@ -59,7 +59,40 @@ List findImageProblems(image) {
 
   if (!isText(image.dockerfile)) problems.add("Image ${image.name} must have a dockerfile.")
 
+  if (image.containsKey("buildArgs")) problems.addAll(findBuildArgProblems(image, config))
+
   return problems
+}
+
+List findBuildArgProblems(Map image, Map config) {
+  if (!(image.buildArgs instanceof Map)) return ["Image ${image.name} must list its buildArgs as NAME: value."]
+
+  def knownPlaceholders = ["{tag}", "{commitMessageBase64}", "{builtAt}", "{domain}"]
+  def problems = []
+  for (name in image.buildArgs.keySet()) {
+    def value = image.buildArgs[name]
+    if (!(name ==~ /[A-Z][A-Z0-9_]*/)) problems.add("Build arg ${name} in image ${image.name} must be uppercase letters, digits and underscores.")
+
+    if (!(value instanceof String)) {
+      problems.add("Build arg ${name} in image ${image.name} must be text in quotes.")
+      continue
+    }
+
+    for (placeholder in value.findAll(/\{[^}]*\}/)) {
+      if (!knownPlaceholders.contains(placeholder)) problems.add("Build arg ${name} in image ${image.name} uses unknown value ${placeholder}.")
+    }
+
+    if (value.contains("{domain}") && !everyEnvironmentHasDomain(config)) problems.add("Build arg ${name} in image ${image.name} uses {domain}, so every environment needs a domain.")
+  }
+  return problems
+}
+
+boolean everyEnvironmentHasDomain(Map config) {
+  if (!(config.environments instanceof Map)) return false
+  for (environment in config.environments.values()) {
+    if (!(environment instanceof Map) || !isText(environment.domain)) return false
+  }
+  return true
 }
 
 List findEnvironmentProblems(String name, environment, Map config) {

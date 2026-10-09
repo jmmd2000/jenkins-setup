@@ -1,8 +1,9 @@
 /**
  * Runs the Check stage. Checks the build parameters, the shared settings and the files deploy.yaml mentions, then figures out what this build deploys.
  *
- * Takes the config settings from deploy.yaml
- * Returns the deployment: environment name and settings, image tag, and the compose project name
+ * @param config the settings from deploy.yaml
+ * @return the deployment: environment name and settings, image tag, and the
+ *         compose project name
  */
 Map call(Map config) {
   def knownParameters = ["ENVIRONMENT", "BUILD_IMAGES", "CONFIRM_TESTED", "TAKE_BACKUP", "TAG"]
@@ -35,6 +36,8 @@ Map call(Map config) {
   if (missingFiles) error("deploy.yaml mentions files that are not in the repo: ${missingFiles.join(", ")}")
 
   def tag = params.TAG ?: sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+  if (!params.BUILD_IMAGES) checkImagesExist(config, tag)
+
   def deployment = [
     environmentName: params.ENVIRONMENT,
     environment: config.environments[params.ENVIRONMENT],
@@ -45,4 +48,18 @@ Map call(Map config) {
   currentBuild.description = "${deployment.environmentName} ${tag}"
   echo "Deploying ${config.app} ${tag} to ${deployment.environmentName}."
   return deployment
+}
+
+void checkImagesExist(Map config, String tag) {
+  def missingImages = []
+  withRegistryLogin {
+    for (image in config.images) {
+      def reference = imageReference(image.name, tag)
+      def status = withEnv(["IMAGE=${reference}"]) {
+        sh(script: 'docker buildx imagetools inspect "$IMAGE" > /dev/null 2>&1', returnStatus: true)
+      }
+      if (status != 0) missingImages.add(reference)
+    }
+  }
+  if (missingImages) error("These images are not in the registry: ${missingImages.join(", ")}")
 }

@@ -30,6 +30,20 @@ void call() {
           }
         }
       }
+
+      stage("Build") {
+        when { expression { params.BUILD_IMAGES } }
+        steps {
+          buildImages(config, deployment)
+        }
+      }
+
+      stage("Push") {
+        when { expression { params.BUILD_IMAGES } }
+        steps {
+          pushImages(config, deployment)
+        }
+      }
     }
 
     post {
