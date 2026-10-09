@@ -101,7 +101,7 @@ List findEnvironmentProblems(String name, environment, Map config) {
 
   def problems = findUnknownKeys(environment, ["dir", "domain", "envCredential", "backup", "restoreFromBackups"], "environment ${name}")
 
-  if (!isPath(environment.dir)) problems.add("Environment ${name} must have a dir that starts with /.")
+  if (!isPath(environment.dir)) problems.add("Environment ${name} must have a dir that starts with / and has no spaces or quotes.")
 
   if (!isText(environment.envCredential)) problems.add("Environment ${name} must have an envCredential.")
 
@@ -139,7 +139,7 @@ boolean isName(value) {
 }
 
 boolean isPath(value) {
-  return value instanceof String && value.startsWith("/")
+  return value instanceof String && value ==~ /\/[A-Za-z0-9._\/-]*/
 }
 
 boolean isListOfText(value) {

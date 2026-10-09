@@ -44,6 +44,12 @@ void call() {
           pushImages(config, deployment)
         }
       }
+
+      stage("Prepare VPS") {
+        steps {
+          prepareVps(config, deployment)
+        }
+      }
     }
 
     post {
