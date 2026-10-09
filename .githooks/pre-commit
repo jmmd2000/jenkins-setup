@@ -7,6 +7,7 @@ hadolint_image="hadolint/hadolint:v2.15.1"
 yamllint_image="pipelinecomponents/yamllint:0.35.13"
 shellcheck_image="koalaman/shellcheck:v0.11.0"
 shfmt_image="mvdan/shfmt:v3.14.1"
+bats_image="bats/bats:1.14.0"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -23,7 +24,7 @@ while IFS= read -r file; do
   case "$file" in
     *Dockerfile) dockerfiles+=("$file") ;;
     *.yaml | *.yml) yaml_files+=("$file") ;;
-    *.sh | .githooks/*) shell_files+=("$file") ;;
+    *.sh | *.bats | .githooks/*) shell_files+=("$file") ;;
   esac
 done < <(git diff --cached --name-only --diff-filter=ACMR)
 
@@ -42,4 +43,8 @@ fi
 
 if [ "${#yaml_files[@]}" -gt 0 ]; then
   run_tool "$yamllint_image" yamllint --strict "${yaml_files[@]}"
+fi
+
+if [ -d lib/test ] && ! git diff --cached --quiet -- lib; then
+  run_tool "$bats_image" lib/test
 fi

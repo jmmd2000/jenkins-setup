@@ -9,7 +9,7 @@ Local Jenkins setup.
 
 ## Set up a clone
 
-Turn on the pre-commit hook to lint the Dockerfile, YAML and shell scripts.
+Turn on the pre-commit hook to lint the Dockerfile, YAML and shell scripts. It also runs the library's tests in `lib/test` when anything in `lib/` changes.
 
 ```bash
 git config core.hooksPath .githooks
