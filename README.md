@@ -5,7 +5,7 @@ Local Jenkins setup.
 - `image/`: the Jenkins image. Jenkins LTS, the Docker CLI and a pinned set of plugins.
 - `config/jenkins.yaml`: Configuration as Code (CasC). Jenkins applies it on every start.
 - `docker-compose.yml`: runs the image.
-- `lib/`: the `deploy` shared library that app Jenkinsfiles load.
+- `lib/`: the `deploy` shared library that app Jenkinsfiles load. See [lib/README.md](lib/README.md).
 
 ## Set up a clone
 
@@ -36,8 +36,6 @@ Jenkins home is the host folder `/var/jenkins_home`, mounted at the same path in
 | `image/plugins-lock.txt` | Every plugin and its version                               |
 
 Config stored in `config/jenkins.yaml` replaces the settings it lists on every start. A change made in the UI instead of the yaml to one of those settings is lost on the next restart.
-
-Jenkins applies `config/jenkins.yaml` on every start and replaces the settings it lists so any change to one of those settings in the UI is lost on the next restart.
 
 ## Back up Jenkins home
 
@@ -90,7 +88,9 @@ Change the two versions in `image/Dockerfile`, then rebuild and restart.
 
 ## Add an app
 
-1. In Jenkins, add the app's `.env` as a **Secret file** credential.
-2. Create a **New Item** of type **Pipeline**.
-3. Under **Pipeline**, choose **Pipeline script from SCM** and **Git**. Set the repository URL to the repo's local path, for example `/home/<user>/projects/my-app/`, and set the branch.
-4. Tick **Lightweight checkout**, then save.
+1. In the app repo, add a `Jenkinsfile` and a `deploy.yaml`. See [lib/README.md](lib/README.md).
+2. In Jenkins, add each environment's `.env` as a **Secret file** credential, with the ID that `deploy.yaml` names.
+3. Create a **New Item** of type **Pipeline**.
+4. Under **Pipeline**, choose **Pipeline script from SCM** and **Git**. Set the repository URL to the repo's local path, for example `/home/<user>/projects/my-app/`, and set the branch.
+5. Tick **Lightweight checkout**, then save.
+6. Run the job once. It fails at Check with "Run the tests locally". The run only loads the parameters, so the build form shows them from then on.

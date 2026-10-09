@@ -11,7 +11,7 @@ void call() {
     options {
       disableConcurrentBuilds()
       timeout(time: 30, unit: "MINUTES")
-      buildDiscarder(logRotator(numToKeepStr: "50"))
+      buildDiscarder(logRotator(numToKeepStr: "100"))
     }
 
     parameters {
