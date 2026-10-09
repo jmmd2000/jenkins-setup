@@ -5,6 +5,7 @@ dark-theme:652.vea_da_dfea_e769
 docker-workflow:653.v2f2c08eff0ec
 git:5.10.1
 pipeline-graph-view:1053.v9df19e6ceed2
+pipeline-stage-view:2.41
 pipeline-utility-steps:3.810.va_7672d206740
 ssh-agent:433.v9e73d67c3f74
 timestamper:1.30
