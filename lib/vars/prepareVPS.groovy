@@ -1,5 +1,5 @@
 /**
- * Runs the Prepare VPS stage. Creates the deploy folder, copies the files that deploy.yaml lists, and writes the .env file.
+ * Runs the Prepare VPS stage. Creates the deploy folder, copies the files that deploy.yaml lists, writes the .env file and pulls the images.
  *
  * @param config the settings from deploy.yaml
  * @param deployment what this build deploys, from checkDeploy
@@ -23,6 +23,8 @@ void call(Map config, Map deployment) {
         "APP_NAME=${deployment.appName}",
         "DOMAIN=${environment.domain ?: ""}",
       ])
+
+      sh 'ssh -o BatchMode=yes "$VPS" "cd $DEPLOY_DIR && docker compose pull --quiet"'
     }
   }
 }

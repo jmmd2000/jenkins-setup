@@ -31,7 +31,7 @@ List findProblems(config) {
   if (!isListOfText(config.files)) problems.add("files must list the files to copy to the VPS.")
 
   for (key in ["database", "migrate"]) {
-    if (config.containsKey(key) && !isText(config[key])) {
+    if (config.containsKey(key) && !(config[key] instanceof String && config[key] ==~ /[a-zA-Z0-9][a-zA-Z0-9_.-]*/)) {
       problems.add("${key} must be the name of a service in the compose file.")
     }
   }

@@ -47,7 +47,39 @@ void call() {
 
       stage("Prepare VPS") {
         steps {
-          prepareVps(config, deployment)
+          prepareVPS(config, deployment)
+        }
+      }
+
+      stage("Backup") {
+        when { expression { deployment.environment.backup == true && params.TAKE_BACKUP } }
+        steps {
+          runOnVPS(deployment.environment, "./backup.sh")
+        }
+      }
+
+      stage("Database") {
+        when { expression { config.database != null } }
+        steps {
+          runOnVPS(deployment.environment, "docker compose up --detach --wait ${config.database}")
+        }
+      }
+
+      stage("Restore") {
+        when { expression { deployment.environment.restoreFromBackups != null } }
+        steps {
+          runScriptOnVPS(deployment.environment, "restore-database.sh", [
+            DEPLOY_ENV: deployment.environmentName,
+            DATABASE_SERVICE: config.database,
+            BACKUP_DIR: deployment.environment.restoreFromBackups,
+          ])
+        }
+      }
+
+      stage("Migrate") {
+        when { expression { config.migrate != null } }
+        steps {
+          runOnVPS(deployment.environment, "docker compose run --rm ${config.migrate}")
         }
       }
     }
