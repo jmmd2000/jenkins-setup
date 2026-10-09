@@ -31,5 +31,5 @@ unclassified:
           modernSCM:
             libraryPath: "lib/"
             scm:
-              git:
+              gitSource:
                 remote: "/home/jamesmddoyle/projects/jenkins-setup"
