@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Lints and formats the staged files. Each tool runs from a pinned Docker image,
+# so Docker is the only thing to install.
+set -euo pipefail
+
+hadolint_image="hadolint/hadolint:v2.15.1"
+yamllint_image="pipelinecomponents/yamllint:0.35.13"
+shellcheck_image="koalaman/shellcheck:v0.11.0"
+shfmt_image="mvdan/shfmt:v3.14.1"
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+run_tool() {
+  docker run --rm --user "$(id -u):$(id -g)" --volume "$repo_root:/work" --workdir /work "$@"
+}
+
+dockerfiles=()
+yaml_files=()
+shell_files=()
+
+while IFS= read -r file; do
+  case "$file" in
+    *Dockerfile) dockerfiles+=("$file") ;;
+    *.yaml | *.yml) yaml_files+=("$file") ;;
+    *.sh | .githooks/*) shell_files+=("$file") ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "${#shell_files[@]}" -gt 0 ]; then
+  if ! run_tool "$shfmt_image" --indent 2 --case-indent --diff "${shell_files[@]}"; then
+    run_tool "$shfmt_image" --indent 2 --case-indent --write "${shell_files[@]}"
+    echo "shfmt reformatted the files above. Stage them and commit again."
+    exit 1
+  fi
+  run_tool "$shellcheck_image" "${shell_files[@]}"
+fi
+
+if [ "${#dockerfiles[@]}" -gt 0 ]; then
+  run_tool "$hadolint_image" hadolint "${dockerfiles[@]}"
+fi
+
+if [ "${#yaml_files[@]}" -gt 0 ]; then
+  run_tool "$yamllint_image" yamllint --strict "${yaml_files[@]}"
+fi
