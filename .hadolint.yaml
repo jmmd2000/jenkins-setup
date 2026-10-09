@@ -1,0 +1,3 @@
+ignored:
+  # The Jenkins image switches between the named users root and jenkins.
+  - DL3066
