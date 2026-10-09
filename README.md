@@ -65,13 +65,10 @@ Config stored in `config/jenkins.yaml` replaces the settings it lists on every s
    ./image/lock-plugins.sh
    ```
 
-3. Rebuild and restart. Jenkins only copies plugins from the image into home when they are missing, so delete the old ones first:
+3. Rebuild and restart. The script builds the image first, so a failed build leaves Jenkins running. It then replaces the plugins in Jenkins home with the image's:
 
    ```bash
-   docker compose build
-   docker compose down
-   rm -rf /var/jenkins_home/plugins
-   docker compose up -d
+   ./scripts/restart-jenkins.sh
    ```
 
 To add or remove a plugin, add/remove it in `image/plugins.txt` with a version, then do steps 2 and 3.
@@ -84,7 +81,7 @@ List the versions available to the image:
 docker run --rm --user root --entrypoint bash jenkins-setup -c "apt-get update -qq && apt-cache madison docker-ce-cli docker-buildx-plugin"
 ```
 
-Change the two versions in `image/Dockerfile`, then rebuild and restart.
+Change the two versions in `image/Dockerfile`, then run `./scripts/restart-jenkins.sh`.
 
 ## Add an app
 
