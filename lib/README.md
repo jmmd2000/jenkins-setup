@@ -53,7 +53,7 @@ The Check stage reads the file and lists every mistake in it, including unknown 
 | `app`          | yes    | The app name. With the environment it makes `APP_NAME`, such as `album-reviews-production`.                           |
 | `images`       | yes    | The images to build. Each has a `name`, a `dockerfile` and optional `buildArgs`.                                      |
 | `files`        | yes    | The files to copy to the deploy folder, such as the compose file and `backup.sh`. Each lands under its own file name. |
-| `database`     | no     | The compose service of the database. Turns on the Database stage.                                                     |
+| `database`     | no     | The compose service of the database. Turns on the Database stage, and lets a rollback check for migrations.           |
 | `migrate`      | no     | The compose service that runs migrations. Turns on the Migrate stage.                                                 |
 | `healthcheck`  | no     | The path Verify asks for. The default is `/`.                                                                         |
 | `environments` | yes    | One entry per place to deploy. The first one is the default on the build form.                                        |
@@ -112,10 +112,32 @@ If the credential file sets one of these, the deploy's value replaces it.
 | Database    | `database` is set                | Starts the database and waits until it is healthy.                                                              |
 | Restore     | `restoreFromBackups` is set      | Loads the newest dump in one transaction. A failure changes nothing.                                            |
 | Migrate     | `migrate` is set                 | Runs the migrate service once.                                                                                  |
-| Start       | always                           | Starts the app and waits up to 5 minutes for it to be healthy. Removes week-old unused images on the VPS.       |
+| Start       | always                           | Starts the app and waits up to 5 minutes for it to be healthy.                                                  |
 | Verify      | the environment has a `domain`   | Queries `https://<domain><healthcheck>` for a healthy response, up to 10 times, 6 seconds apart.                |
 
 A deploy times out after 30 minutes. Jenkins keeps the last 100 builds of each job.
+
+After a successful deploy, the library saves the deploy for rollback, then removes unused images more than a week old from the VPS.
+
+## Rollback
+
+After every successful deploy, the deploy folder keeps a copy of its files and `.env` in `.rollback/`. Only the deploy user can read it.
+
+When a deploy fails, the library decides whether to put that copy back:
+
+| The deploy failed                                  | What happens                                                                                          |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| before Prepare VPS                                 | Nothing. The VPS has not changed.                                                                     |
+| after Prepare VPS, and no migration ran            | Rollback. The last good files and `.env` go back, the app starts, and Verify runs on the old version. |
+| after a migration ran                              | Nothing. The old version may not work with the new schema.                                            |
+| before any deploy of the environment has succeeded | Nothing. There is no copy to put back yet.                                                            |
+
+The build stays failed either way. The log ends with a line that starts with `ROLLED BACK` or `NOT rolled back`, and says why.
+
+- **When the old version also fails Verify,** the problem is outside the code, such as Traefik or Cloudflare. The old version is left running.
+- **When a migration ran,** fix the app and deploy again, or restore the database by hand. On environments with `backup: true`, the Backup stage took a backup before the deploy.
+- **The migration check counts the rows in `drizzle.__drizzle_migrations`.** drizzle applies all pending migrations in one transaction, so an unchanged count means an unchanged schema. It needs `database` in `deploy.yaml`. An app with another migration tool needs its own check.
+- **Verify on the old version uses the new `deploy.yaml`'s `healthcheck`.** If the new deploy only changed that path, the log blames something outside the code.
 
 ## Shared settings
 
