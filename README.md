@@ -17,6 +17,8 @@ git config core.hooksPath .githooks
 
 ## Run Jenkins
 
+Copy `.env.example` to `.env` and fill in the VPS and GitHub details. Compose refuses to start without them.
+
 ```bash
 docker compose up -d
 ```
