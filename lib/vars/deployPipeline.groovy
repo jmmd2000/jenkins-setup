@@ -47,6 +47,9 @@ void call() {
 
       stage("Prepare VPS") {
         steps {
+          script {
+            deployment.vpsTouched = true
+          }
           prepareVPS(config, deployment)
         }
       }
@@ -79,12 +82,19 @@ void call() {
       stage("Migrate") {
         when { expression { config.migrate != null } }
         steps {
+          script {
+            deployment.migrationsBefore = countMigrations(config, deployment)
+          }
           runOnVPS(deployment.environment, "docker compose run --rm ${config.migrate}")
         }
       }
 
       stage("Start") {
         steps {
+          script {
+            // Apps without a migrate service migrate as they start.
+            if (config.migrate == null) deployment.migrationsBefore = countMigrations(config, deployment)
+          }
           runOnVPS(deployment.environment, "docker compose up --detach --wait --wait-timeout 300 --remove-orphans")
         }
       }
@@ -101,6 +111,16 @@ void call() {
       success {
         echo "Deployed ${deployment.tag} to ${deployment.environmentName}."
         script {
+          def fileNames = []
+          for (file in config.files) {
+            fileNames.add(file.tokenize("/").last())
+          }
+          try {
+            runScriptOnVPS(deployment.environment, "snapshot-deploy.sh", [FILES: fileNames.join(",")])
+          } catch (error) {
+            echo "Saving this deploy for rollback failed, so a failed deploy cannot roll back to it. ${error.message}"
+          }
+
           // Pruning waits until the deploy is proven, so the old images are
           // still there if it fails. A failed prune does not fail the deploy.
           try {
@@ -112,6 +132,15 @@ void call() {
       }
       failure {
         echo "The deploy failed, check the logs."
+      }
+      unsuccessful {
+        script {
+          try {
+            rollback(config, deployment)
+          } catch (error) {
+            echo "NOT rolled back: the rollback itself failed. ${error.message}"
+          }
+        }
       }
     }
   }
