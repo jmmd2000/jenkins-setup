@@ -86,7 +86,6 @@ void call() {
       stage("Start") {
         steps {
           runOnVPS(deployment.environment, "docker compose up --detach --wait --wait-timeout 300 --remove-orphans")
-          runOnVPS(deployment.environment, "docker image prune --all --force --filter until=168h || echo 'Image prune failed. The deploy itself worked.'")
         }
       }
 
@@ -101,6 +100,15 @@ void call() {
     post {
       success {
         echo "Deployed ${deployment.tag} to ${deployment.environmentName}."
+        script {
+          // Pruning waits until the deploy is proven, so the old images are
+          // still there if it fails. A failed prune does not fail the deploy.
+          try {
+            runOnVPS(deployment.environment, "docker image prune --all --force --filter until=168h")
+          } catch (error) {
+            echo "Image prune failed. The deploy itself worked. ${error.message}"
+          }
+        }
       }
       failure {
         echo "The deploy failed, check the logs."
