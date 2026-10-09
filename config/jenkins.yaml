@@ -1,0 +1,26 @@
+jenkins:
+  numExecutors: 2
+  slaveAgentPort: -1
+
+appearance:
+  themeManager:
+    theme: "dark"
+
+unclassified:
+  location:
+    url: "http://localhost:8081/"
+  timestamper:
+    allPipelines: true
+  ansiColorBuildWrapper:
+    globalColorMapName: "xterm"
+  globalLibraries:
+    libraries:
+      - name: "deploy"
+        defaultVersion: "master"
+        allowVersionOverride: true
+        retriever:
+          modernSCM:
+            libraryPath: "lib/"
+            scm:
+              git:
+                remote: "/home/jamesmddoyle/projects/jenkins-setup"
