@@ -1,0 +1,24 @@
+name: jenkins
+
+services:
+  jenkins:
+    build: image
+    image: jenkins-setup
+    container_name: jenkins-local
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    group_add:
+      - "1001"
+    environment:
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
+      CASC_JENKINS_CONFIG: /home/jamesmddoyle/projects/jenkins-setup/config/jenkins.yaml
+    volumes:
+      # Jenkins home has the same path inside and outside the container. Builds
+      # start containers through the host's Docker engine, which needs host
+      # paths to mount a workspace.
+      - /var/jenkins_home:/var/jenkins_home
+      - /home/jamesmddoyle/projects:/home/jamesmddoyle/projects
+      - /var/run/docker.sock:/var/run/docker.sock
