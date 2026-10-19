@@ -40,9 +40,23 @@ void buildImage(Map image, String tag, Map buildValues) {
   }
   environment.add("BUILD_ARG_FLAGS=${buildArgFlags.join(" ")}")
 
-  withEnv(environment) {
-    // A --build-arg with only a name takes its value from the environment.
-    // BUILD_ARG_FLAGS stays unquoted so each flag becomes its own word.
-    sh 'docker build --file "$DOCKERFILE" --tag "$IMAGE" $BUILD_ARG_FLAGS .'
+  def buildSecrets = image.buildSecrets ?: [:]
+  def secretBindings = []
+  def secretFlags = []
+
+  for (name in buildSecrets.keySet()) {
+    def variable = "BUILD_SECRET_${name.toUpperCase()}"
+    secretBindings.add(string(credentialsId: buildSecrets[name], variable: variable))
+    secretFlags.add("--secret id=${name},env=${variable}")
+  }
+  environment.add("BUILD_SECRET_FLAGS=${secretFlags.join(" ")}")
+
+  withCredentials(secretBindings) {
+    withEnv(environment) {
+      // A --build-arg with only a name takes its value from the environment.
+      // A --secret with env= also takes its value from the environment, and keeps it out of the image and the log.
+      // The flag variables stay unquoted so each flag becomes its own word.
+      sh 'docker build --file "$DOCKERFILE" --tag "$IMAGE" $BUILD_ARG_FLAGS $BUILD_SECRET_FLAGS .'
+    }
   }
 }
