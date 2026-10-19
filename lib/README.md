@@ -51,7 +51,7 @@ The Check stage reads the file and lists every mistake in it, including unknown 
 | Key            | Needed | What it does                                                                                                          |
 | -------------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
 | `app`          | yes    | The app name. With the environment it makes `APP_NAME`, such as `album-reviews-production`.                           |
-| `images`       | yes    | The images to build. Each has a `name`, a `dockerfile` and optional `buildArgs`.                                      |
+| `images`       | yes    | The images to build. Each has a `name`, a `dockerfile`, and optional `buildArgs` and `buildSecrets`.                  |
 | `files`        | yes    | The files to copy to the deploy folder, such as the compose file and `backup.sh`. Each lands under its own file name. |
 | `database`     | no     | The compose service of the database. Turns on the Database stage, and lets a rollback check for migrations.           |
 | `migrate`      | no     | The compose service that runs migrations. Turns on the Migrate stage.                                                 |
@@ -78,6 +78,38 @@ Each environment:
 | `{commitMessageBase64}` | The commit subject, base64 encoded                               |
 | `{builtAt}`             | The build time in UTC, such as `2026-10-09T19:48:12Z`            |
 | `{domain}`              | The environment's domain. Every environment then needs a domain. |
+
+### Build secrets
+
+`buildSecrets` maps a secret name to the ID of a Jenkins **Secret text** credential. The Build stage gives each secret to `docker build`, and the Dockerfile reads it with a secret mount.
+
+`deploy.yaml`:
+
+```yaml
+images:
+  - name: album-web
+    dockerfile: apps/web/Dockerfile
+    buildArgs:
+      GIT_SHA: "{tag}"
+    buildSecrets:
+      glitchtip_token: glitchtip-token
+```
+
+`Dockerfile`:
+
+```dockerfile
+ARG GIT_SHA
+RUN --mount=type=secret,id=glitchtip_token,env=SENTRY_AUTH_TOKEN \
+    ./upload-source-maps.sh "$GIT_SHA"
+```
+
+The secret never enters the image, its history or the build log. A secret name is lowercase letters, digits and underscores, and starts with a letter.
+
+- Do not print the secret, and do not change it before you print it. Jenkins hides only the exact value.
+- Docker caches a `RUN` step that uses a secret, like any other step. Pass a build arg that changes with each commit, such as `{tag}`, and use it in the step. The step then runs again for each new tag.
+- A credential that does not exist fails the Build stage with `Could not find credentials entry with ID`.
+- Any app can use any Secret text credential in this Jenkins. This is the same as `envCredential`.
+- Only the Build stage uses the secrets. A deploy that reuses an existing tag builds nothing, so it does not run the step again.
 
 ### The .env file
 
@@ -142,7 +174,7 @@ The build stays failed either way. The log ends with a line that starts with `RO
 ## Shared settings
 
 - `VPS_HOST`, `VPS_USER` and `GHCR_USER` come from `.env` in this repo. See the main README.
-- The library uses two Jenkins credentials: `github-ghcr` (username and token for the registry) and `vps-ssh` (the SSH key for the VPS).
+- The library uses two Jenkins credentials of its own: `github-ghcr` (username and token for the registry) and `vps-ssh` (the SSH key for the VPS). Each app adds its own: the Secret file for each `envCredential`, and the Secret text for each of its `buildSecrets`.
 - The VPS needs this repo's SSH key in `authorized_keys`, and a `docker login ghcr.io`, once per server.
 
 ## First runs

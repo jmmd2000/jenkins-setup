@@ -87,6 +87,7 @@ Change the two versions in `image/Dockerfile`, then run `./scripts/restart-jenki
 
 1. In the app repo, add a `Jenkinsfile` and a `deploy.yaml`. See [lib/README.md](lib/README.md).
 2. In Jenkins, add each environment's `.env` as a **Secret file** credential, with the ID that `deploy.yaml` names.
+   If `deploy.yaml` lists `buildSecrets`, add each one as a **Secret text** credential, with the ID that `deploy.yaml` names.
 3. Create a **New Item** of type **Pipeline**.
 4. Under **Pipeline**, choose **Pipeline script from SCM** and **Git**. Set the repository URL to the repo's local path, for example `/home/<user>/projects/my-app/`, and set the branch.
 5. Tick **Lightweight checkout**, then save.

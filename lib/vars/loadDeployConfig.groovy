@@ -54,13 +54,28 @@ List findImageProblems(image, Map config) {
     return ["Each image must have a name and a dockerfile."]
   }
 
-  def problems = findUnknownKeys(image, ["name", "dockerfile", "buildArgs"], "an image")
+  def problems = findUnknownKeys(image, ["name", "dockerfile", "buildArgs", "buildSecrets"], "an image")
   if (!isName(image.name)) problems.add("Each image name must be lowercase letters, digits and hyphens.")
 
   if (!isText(image.dockerfile)) problems.add("Image ${image.name} must have a dockerfile.")
 
   if (image.containsKey("buildArgs")) problems.addAll(findBuildArgProblems(image, config))
 
+  if (image.containsKey("buildSecrets")) problems.addAll(findBuildSecretProblems(image))
+
+  return problems
+}
+
+List findBuildSecretProblems(Map image) {
+  if (!(image.buildSecrets instanceof Map)) return ["Image ${image.name} must list its buildSecrets as secret name: credential ID."]
+
+  def problems = []
+  for (name in image.buildSecrets.keySet()) {
+    def credentialID = image.buildSecrets[name]
+    if (!(name ==~ /[a-z][a-z0-9_]*/)) problems.add("Build secret ${name} in image ${image.name} must be lowercase letters, digits and underscores, and start with a letter.")
+
+    if (!isText(credentialID)) problems.add("Build secret ${name} in image ${image.name} must be the ID of a Secret text credential.")
+  }
   return problems
 }
 
