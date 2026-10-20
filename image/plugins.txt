@@ -4,6 +4,7 @@ credentials-binding:728.v902a_273b_8947
 dark-theme:652.vea_da_dfea_e769
 docker-workflow:653.v2f2c08eff0ec
 git:5.10.1
+matrix-auth:3.3
 mcp-server:0.211.v5d12e5b_b_437e
 pipeline-graph-view:1053.v9df19e6ceed2
 pipeline-stage-view:2.41

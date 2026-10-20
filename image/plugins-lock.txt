@@ -36,6 +36,7 @@ jaxb:2.3.9-143.v5979df3304e6
 joda-time-api:2.15.0-208.v6b_084e7a_d9f0
 json-api:20260814-226.v20f9685d642c
 mailer:534.v1b_36f5864073
+matrix-auth:3.3
 mcp-server:0.211.v5d12e5b_b_437e
 mina-sshd-api-common:2.19.0-192.v2b_a_7b_2c1dc71
 mina-sshd-api-core:2.19.0-192.v2b_a_7b_2c1dc71
