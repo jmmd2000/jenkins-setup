@@ -8,6 +8,7 @@
  *        the stages set
  */
 void call(Map config, Map deployment) {
+  deployment.rolledBack = false
   if (!deployment.vpsTouched) {
     echo "NOT rolled back: the deploy failed before it changed the VPS."
     return
@@ -22,6 +23,7 @@ void call(Map config, Map deployment) {
   }
 
   runScriptOnVPS(deployment.environment, "restore-snapshot.sh", [:])
+  deployment.rolledBack = true
 
   if (deployment.environment.domain == null) {
     echo "ROLLED BACK to the last good deploy."

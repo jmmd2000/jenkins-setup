@@ -10,6 +10,8 @@ jenkins:
             value: "${VPS_USER}"
           - key: "GHCR_USER"
             value: "${GHCR_USER}"
+          - key: "LOOKOUT_URL"
+            value: "${LOOKOUT_URL:-}"
 
 appearance:
   themeManager:

@@ -26,7 +26,9 @@ void call() {
       stage("Check") {
         steps {
           script {
+            deployment.stage = env.STAGE_NAME
             deployment.putAll(checkDeploy(config))
+            recordDeploy(config, deployment, "started")
           }
         }
       }
@@ -34,6 +36,7 @@ void call() {
       stage("Build") {
         when { expression { params.BUILD_IMAGES } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           buildImages(config, deployment)
         }
       }
@@ -41,6 +44,7 @@ void call() {
       stage("Push") {
         when { expression { params.BUILD_IMAGES } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           pushImages(config, deployment)
         }
       }
@@ -48,6 +52,7 @@ void call() {
       stage("Prepare VPS") {
         steps {
           script {
+            deployment.stage = env.STAGE_NAME
             deployment.vpsTouched = true
           }
           prepareVPS(config, deployment)
@@ -57,6 +62,7 @@ void call() {
       stage("Backup") {
         when { expression { deployment.environment.backup == true && params.TAKE_BACKUP } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           runOnVPS(deployment.environment, "./backup.sh")
         }
       }
@@ -64,6 +70,7 @@ void call() {
       stage("Database") {
         when { expression { config.database != null } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           runOnVPS(deployment.environment, "docker compose up --detach --wait ${config.database}")
         }
       }
@@ -71,6 +78,7 @@ void call() {
       stage("Restore") {
         when { expression { deployment.environment.restoreFromBackups != null } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           runScriptOnVPS(deployment.environment, "restore-database.sh", [
             DEPLOY_ENV: deployment.environmentName,
             DATABASE_SERVICE: config.database,
@@ -83,6 +91,7 @@ void call() {
         when { expression { config.migrate != null } }
         steps {
           script {
+            deployment.stage = env.STAGE_NAME
             deployment.migrationsBefore = countMigrations(config, deployment)
           }
           runOnVPS(deployment.environment, "docker compose run --rm ${config.migrate}")
@@ -92,6 +101,7 @@ void call() {
       stage("Start") {
         steps {
           script {
+            deployment.stage = env.STAGE_NAME
             // Apps without a migrate service migrate as they start.
             if (config.migrate == null) deployment.migrationsBefore = countMigrations(config, deployment)
           }
@@ -102,6 +112,7 @@ void call() {
       stage("Verify") {
         when { expression { deployment.environment.domain != null } }
         steps {
+          script { deployment.stage = env.STAGE_NAME }
           verifyApp(config, deployment)
         }
       }
@@ -141,6 +152,10 @@ void call() {
             echo "NOT rolled back: the rollback itself failed. ${error.message}"
           }
         }
+      }
+      // Runs last, after any rollback, so the record says how the deploy ended
+      cleanup {
+        recordDeploy(config, deployment, "finished")
       }
     }
   }

@@ -18,6 +18,7 @@ services:
       VPS_HOST: ${VPS_HOST:?Set VPS_HOST in .env}
       VPS_USER: ${VPS_USER:?Set VPS_USER in .env}
       GHCR_USER: ${GHCR_USER:?Set GHCR_USER in .env}
+      LOOKOUT_URL: ${LOOKOUT_URL:-}
     volumes:
       # Jenkins home has the same path inside and outside the container. Builds
       # start containers through the host's Docker engine, which needs host

@@ -175,6 +175,7 @@ The build stays failed either way. The log ends with a line that starts with `RO
 
 - `VPS_HOST`, `VPS_USER` and `GHCR_USER` come from `.env` in this repo. See the main README.
 - The library uses two Jenkins credentials of its own: `github-ghcr` (username and token for the registry) and `vps-ssh` (the SSH key for the VPS). Each app adds its own: the Secret file for each `envCredential`, and the Secret text for each of its `buildSecrets`.
+- Deploy records go to Lookout when `LOOKOUT_URL` is set in `.env` and the **Secret text** credential `lookout-deploy-token` exists. After setting `LOOKOUT_URL`, recreate the container with `docker compose up -d`: a restart doesn't load it. Each deploy sends one record after Check and one at the very end, after any rollback. A deploy that fails at Check sends only the end record. A failed send only logs a line, and never fails the deploy.
 - The VPS needs this repo's SSH key in `authorized_keys`, and a `docker login ghcr.io`, once per server.
 
 ## First runs
