@@ -81,6 +81,8 @@ Map deployRecord(Map deployment, String environmentName, Map environment, String
     record.commitMessage = subject.length() > 500 ? subject.substring(0, 500) : subject
   }
 
+  if (deployment.tag) record.version = appVersion(deployment.tag)
+
   if (event == "finished") {
     record.finishedAt = isoTime(System.currentTimeMillis())
     record.result = deployResult()
@@ -90,6 +92,32 @@ Map deployRecord(Map deployment, String environmentName, Map environment, String
   }
 
   return withoutEmptyValues(record)
+}
+
+/**
+ * The version in the root package.json at the deployed commit, or null when
+ * the commit has no package.json or no version there.
+ */
+String appVersion(String tag) {
+  try {
+    def packageJSON = withEnv(["DEPLOY_TAG=${tag}"]) {
+      // Single quotes so the shell reads the tag and Groovy never puts it in the script
+      sh(script: 'git show "$DEPLOY_TAG:package.json" 2>/dev/null', returnStdout: true)
+    }
+    def version = versionIn(packageJSON)
+    // Lookout refuses a version over 50 characters, and with it the whole record
+    return version && version.length() <= 50 ? version : null
+  } catch (FlowInterruptedException abort) {
+    throw abort
+  } catch (error) {
+    return null
+  }
+}
+
+@NonCPS
+String versionIn(String packageJSON) {
+  def parsed = new groovy.json.JsonSlurperClassic().parseText(packageJSON)
+  return parsed instanceof Map && parsed.version instanceof String ? parsed.version.trim() : null
 }
 
 @NonCPS
